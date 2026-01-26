@@ -28,7 +28,7 @@
             display: flex; justify-content: space-between; align-items: center;
             padding: 0 60px;
             border-bottom: 10px solid var(--primary-color);
-            position: relative; z-index2: 999;
+            position: relative; z-index: 999;
         }
 
         .logo img { 
@@ -65,5 +65,175 @@
         /* 表格設計 */
         #schedule-section { background: var(--bg-light); }
         .page-title {
-            padding: 6
+            padding: 60px 60px 30px;
+            font-size: 64px; font-weight: 900;
+            color: var(--primary-color);
+        }
 
+        main { padding: 0 60px; }
+        table {
+            width: 100%; border-collapse: collapse;
+            background: white;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+            border-radius: 35px; overflow: hidden;
+        }
+
+        th { background: var(--primary-color); color: white; font-size: 42px; padding: 45px 30px; text-align: left; }
+        td { font-size: 40px; padding: 45px 30px; border-bottom: 2px solid #eee; color: #333; line-height: 1.4; }
+        tr:nth-child(even) td { background-color: #fafafa; }
+        .location-tag { color: #0066cc; font-weight: bold; background: #e7f2ff; padding: 8px 20px; border-radius: 12px; }
+
+        /* 海報設計 */
+        #poster-section { background: #000; display: flex; justify-content: center; align-items: center; }
+        #poster-image { width: 100%; height: 100%; object-fit: cover; }
+
+        .no-data { text-align: center; padding: 250px 0; font-size: 56px; color: #bbb; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">
+        <img src="logo.png" onerror="this.src='https://via.placeholder.com/300x80?text=LOGO'" alt="Logo">
+    </div>
+    <div class="time-box">
+        <div id="date-display">--/--/--</div>
+        <div id="clock-display">00:00</div>
+    </div>
+</header>
+
+<div class="viewport">
+    <div id="schedule-section" class="section active">
+        <div class="page-title">是日租場安排</div>
+        <main>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="40%">時間</th>
+                        <th width="30%">地點</th>
+                        <th width="30%">使用者</th>
+                    </tr>
+                </thead>
+                <tbody id="data-body">
+                    <tr><td colspan="4" class="no-data">系統同步中...</td></tr>
+                </tbody>
+            </table>
+        </main>
+    </div>
+
+    <div id="poster-section" class="section">
+        <img src="" id="poster-image" alt="Poster">
+    </div>
+</div>
+
+<script>
+    /** --- 自動化網址 --- **/
+    const scheduleCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4_yLW9apo6a7pN1PdN65cTKbnnb8bLCBUNrXwWIiP28rn_G5r7-vB1hqTZXXhr8LerJrSn4f334eu/pub?gid=0&single=true&output=csv';
+    const posterCsvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4_yLW9apo6a7pN1PdN65cTKbnnb8bLCBUNrXwWIiP28rn_G5r7-vB1hqTZXXhr8LerJrSn4f334eu/pub?gid=6573573&single=true&output=csv';
+
+    const CONFIG = {
+        scheduleTime: 30000, // 活動表顯示 30 秒
+        posterTime: 15000    // 海報顯示 15 秒
+    };
+
+    let posterList = [];
+    let currentIdx = 0;
+    const scheduleSec = document.getElementById('schedule-section');
+    const posterSec = document.getElementById('poster-section');
+    const posterImg = document.getElementById('poster-image');
+
+    /** --- 時鐘功能 --- **/
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('date-display').textContent = now.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+        document.getElementById('clock-display').textContent = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    }
+
+    /** --- 抓取海報 --- **/
+    async function fetchPosters() {
+        try {
+            const res = await fetch(`${posterCsvUrl}&t=${new Date().getTime()}`);
+            const text = await res.text();
+            const lines = text.split(/\r?\n/);
+            // 抓取網址，過濾掉第一行標題與空白行
+            posterList = lines.slice(1).map(l => l.trim()).filter(l => l.length > 5);
+        } catch (e) { console.error("海報更新失敗", e); }
+    }
+
+    /** --- 抓取活動 --- **/
+    async function fetchSchedule() {
+        try {
+            const res = await fetch(`${scheduleCsvUrl}&t=${new Date().getTime()}`);
+            const text = await res.text();
+            const rows = text.split(/\r?\n/).map(row => row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/));
+            const tbody = document.getElementById('data-body');
+            tbody.innerHTML = '';
+
+            const now = new Date();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const yy = String(now.getFullYear()).slice(-2);
+            const todayStr = `${dd}/${mm}/${yy}`; // 匹配 DD/MM/YY
+
+            let hasData = false;
+            for (let i = 1; i < rows.length; i++) {
+                const [date, time, act, loc, user] = rows[i].map(c => c ? c.replace(/["']/g, "").trim() : "");
+                if (date === todayStr) {
+                    hasData = true;
+                    tbody.innerHTML += `<tr>
+                        <td>${time}</td>
+                        <td><strong>${act}</strong></td>
+                        <td><span class="location-tag">${loc}</span></td>
+                        <td>${user}</td>
+                    </tr>`;
+                }
+            }
+            if (!hasData) tbody.innerHTML = `<tr><td colspan="4" class="no-data">今日暫無租場安排<br><span style="font-size:28px">${todayStr}</span></td></tr>`;
+        } catch (e) { console.error("活動更新失敗", e); }
+    }
+
+    /** --- 輪播邏輯 --- **/
+    function showSchedule() {
+        scheduleSec.classList.add('active');
+        posterSec.classList.remove('active');
+        setTimeout(() => {
+            if (posterList.length > 0) showPoster();
+            else showSchedule();
+        }, CONFIG.scheduleTime);
+    }
+
+    function showPoster() {
+        scheduleSec.classList.remove('active');
+        posterSec.classList.add('active');
+        posterImg.src = posterList[currentIdx];
+
+        setTimeout(() => {
+            currentIdx++;
+            if (currentIdx >= posterList.length) {
+                currentIdx = 0;
+                showSchedule();
+            } else {
+                showPoster();
+            }
+        }, CONFIG.posterTime);
+    }
+
+    /** --- 啟動 --- **/
+    async function start() {
+        updateClock();
+        setInterval(updateClock, 1000);
+        await fetchPosters();
+        await fetchSchedule();
+        showSchedule();
+        // 每 10 分鐘同步一次後台
+        setInterval(async () => {
+            await fetchPosters();
+            await fetchSchedule();
+        }, 600000);
+    }
+
+    start();
+</script>
+
+</body>
+</html>
