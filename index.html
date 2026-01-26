@@ -53,7 +53,7 @@
                 <tr>
                     <th width="25%">時間</th>
                     <th width="45%">地點</th>
-                    <th width="30%">負責人</th>
+                    <th width="30%">租用</th>
                 </tr>
             </thead>
             <tbody id="data-list">
@@ -115,7 +115,7 @@
                 const date = row[0] ? row[0].replace(/["']/g, "").trim() : "";
                 if(date === todayStr) {
                     found = true;
-                    // 跳過 row[2] (活動內容)，只顯示時間(1)、地點(3)、負責人(4)
+                    // 跳過 row[2] (活動內容)，只顯示時間(1)、地點(3)、租用(4)
                     tbody.innerHTML += `<tr>
                         <td>${row[1]}</td>
                         <td><span class="location-tag">${row[3]}</span></td>
@@ -151,4 +151,5 @@
 </script>
 </body>
 </html>
+
 
