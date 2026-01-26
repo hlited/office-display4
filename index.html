@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活動看板</title>
+    <style>
+        :root { --main-blue: #0056b3; --line-color: #d1e7ff; }
+        body, html { margin: 0; padding: 0; width: 1080px; height: 1920px; font-family: sans-serif; overflow: hidden; background: #fff; }
+        
+        /* 頂部時鐘與 Logo */
+        header { 
+            height: 180px; display: flex; justify-content: space-between; align-items: center; 
+            padding: 0 60px; border-bottom: 8px solid var(--main-blue); 
+        }
+        .logo img { height: 70px; } /* 已縮小 Logo */
+        .clock-box { text-align: right; }
+        #time { font-size: 80px; font-weight: bold; color: var(--main-blue); line-height: 1; }
+        #date { font-size: 32px; color: #666; }
+
+        /* 內容區 */
+        .viewport { position: relative; height: 1740px; }
+        .section { position: absolute; width: 100%; height: 100%; transition: opacity 1s; opacity: 0; }
+        .section.active { opacity: 1; }
+
+        /* 完全對齊圖片範例的表格樣式 */
+        .title { padding: 60px; font-size: 60px; font-weight: bold; }
+        table { width: 90%; margin: 0 auto; border-collapse: collapse; font-size: 42px; }
+        th { border-bottom: 3px solid var(--line-color); padding: 30px 10px; text-align: left; color: #000; }
+        td { padding: 40px 10px; border-bottom: 1px solid #eee; }
+        .no-data { text-align: center; padding: 100px; color: #999; }
+        
+        #poster-img { width: 100%; height: 100%; object-fit: cover; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo"><img src="logo.png" onerror="this.src='https://via.placeholder.com/200x70?text=LOGO'"></div>
+    <div class="clock-box">
+        <div id="date">--/--/--</div>
+        <div id="time">00:00</div>
+    </div>
+</header>
+
+<div class="viewport">
+    <div id="schedule-sec" class="section active">
+        <div class="title">3. 範例格式</div>
+        <table>
+            <thead>
+                <tr>
+                    <th width="25%">時間</th>
+                    <th width="30%">活動</th>
+                    <th width="25%">地點</th>
+                    <th width="20%">負責人</th>
+                </tr>
+            </thead>
+            <tbody id="data-list">
+                <tr><td colspan="4" class="no-data">載入中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="poster-sec" class="section">
+        <img id="poster-img" src="">
+    </div>
+</div>
+
+<script>
+    // 填入你的 CSV 網址
+    const scheduleUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4_yLW9apo6a7pN1PdN65cTKbnnb8bLCBUNrXwWIiP28rn_G5r7-vB1hqTZXXhr8LerJrSn4f334eu/pub?gid=0&single=true&output=csv';
+    const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4_yLW9apo6a7pN1PdN65cTKbnnb8bLCBUNrXwWIiP28rn_G5r7-vB1hqTZXXhr8LerJrSn4f334eu/pub?gid=6573573&single=true&output=csv';
+
+    let posters = [];
+    let pIdx = 0;
+
+    function updateTime() {
+        const now = new Date();
+        document.getElementById('date').innerText = now.toLocaleDateString();
+        document.getElementById('time').innerText = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
+    }
+    setInterval(updateTime, 1000);
+
+    async function loadData() {
+        try {
+            // 抓海報
+            const pRes = await fetch(posterUrl + '&cache=' + Math.random());
+            const pText = await pRes.text();
+            posters = pText.split('\n').slice(1).map(line => line.trim()).filter(l => l.length > 5);
+
+            // 抓活動
+            const sRes = await fetch(scheduleUrl + '&cache=' + Math.random());
+            const sText = await sRes.text();
+            const rows = sText.split('\n').map(r => r.split(','));
+            
+            const tbody = document.getElementById('data-list');
+            tbody.innerHTML = '';
+            
+            const today = new Date();
+            const todayStr = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getFullYear()).slice(-2)}`;
+
+            let found = false;
+            rows.slice(1).forEach(row => {
+                if(row[0] && row[0].trim() === todayStr) {
+                    found = true;
+                    tbody.innerHTML += `<tr>
+                        <td>${row[1]}</td>
+                        <td>${row[2]}</td>
+                        <td>${row[3]}</td>
+                        <td>${row[4]}</td>
+                    </tr>`;
+                }
+            });
+            if(!found) tbody.innerHTML = `<tr><td colspan="4" class="no-data">今日暫無活動安排 (${todayStr})</td></tr>`;
+        } catch(e) { console.error(e); }
+    }
+
+    function switchMode() {
+        const sSec = document.getElementById('schedule-sec');
+        const pSec = document.getElementById('poster-sec');
+        
+        if (sSec.classList.contains('active') && posters.length > 0) {
+            sSec.classList.remove('active');
+            pSec.classList.add('active');
+            document.getElementById('poster-img').src = posters[pIdx];
+            pIdx = (pIdx + 1) % posters.length;
+            setTimeout(switchMode, 15000); // 海報看 15 秒
+        } else {
+            pSec.classList.remove('active');
+            sSec.classList.add('active');
+            setTimeout(switchMode, 30000); // 表格看 30 秒
+        }
+    }
+
+    loadData();
+    setInterval(loadData, 600000); // 10分鐘更新一次
+    updateTime();
+    switchMode();
+</script>
+</body>
+</html>
