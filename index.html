@@ -3,35 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>活動看板</title>
+    <title>Bilingual Office Display - Updated</title>
     <style>
         :root { --main-blue: #003366; --line-color: #d1e7ff; }
-        body, html { margin: 0; padding: 0; width: 1080px; height: 1920px; font-family: "Microsoft JhengHei", sans-serif; overflow: hidden; background: #fff; }
+        body, html { margin: 0; padding: 0; width: 1080px; height: 1920px; font-family: "Microsoft JhengHei", "Arial", sans-serif; overflow: hidden; background: #fff; }
         
         /* 頂部 Header */
         header { 
             height: 180px; display: flex; justify-content: space-between; align-items: center; 
             padding: 0 60px; border-bottom: 8px solid var(--main-blue); 
         }
-        .logo img { height: 60px; width: auto; object-fit: contain; }
+        .logo img { height: 80px; width: auto; object-fit: contain; }
         .clock-box { text-align: right; }
         #time { font-size: 85px; font-weight: 900; color: var(--main-blue); line-height: 1; }
-        #date { font-size: 36px; color: #666; margin-bottom: 5px; }
+        #date { font-size: 32px; color: #666; font-weight: bold; }
 
         /* 內容區 */
         .viewport { position: relative; height: 1740px; }
         .section { position: absolute; width: 100%; height: 100%; transition: opacity 1.5s ease-in-out; opacity: 0; }
         .section.active { opacity: 1; }
 
-        /* 表格設計：移除活動欄位後加寬其餘欄位 */
-        .title { padding: 60px; font-size: 68px; font-weight: bold; color: var(--main-blue); }
-        table { width: 960px; margin: 0 auto; border-collapse: collapse; font-size: 46px; table-layout: fixed; }
-        th { border-bottom: 4px solid var(--main-blue); padding: 40px 10px; text-align: left; color: #000; }
-        td { padding: 50px 10px; border-bottom: 1px solid #eee; word-wrap: break-word; }
+        /* 標題區域 */
+        .title { padding: 60px 60px 30px; color: var(--main-blue); }
+        .title .zh { font-size: 68px; font-weight: bold; display: block; }
+        .title .en { font-size: 36px; font-weight: normal; color: #555; text-transform: uppercase; letter-spacing: 2px; }
+
+        /* 表格設計：加寬地點與負責人欄位 */
+        table { width: 960px; margin: 0 auto; border-collapse: collapse; table-layout: fixed; }
+        th { border-bottom: 4px solid var(--main-blue); padding: 30px 10px; text-align: left; vertical-align: bottom; }
+        th .zh { font-size: 42px; display: block; color: #000; }
+        th .en { font-size: 24px; font-weight: normal; color: #666; display: block; }
         
-        .location-tag { color: #0066cc; font-weight: bold; background: #e7f2ff; padding: 10px 20px; border-radius: 15px; }
-        .no-data { text-align: center; padding: 200px; color: #bbb; font-size: 50px; }
+        td { padding: 50px 10px; border-bottom: 1px solid #eee; font-size: 42px; word-wrap: break-word; color: #333; }
+        .location-tag { color: #0066cc; font-weight: bold; background: #e7f2ff; padding: 10px 20px; border-radius: 12px; display: inline-block; }
         
+        .no-data { text-align: center; padding: 200px; color: #bbb; }
+        .no-data .zh { font-size: 56px; display: block; margin-bottom: 15px; }
+        .no-data .en { font-size: 32px; display: block; }
+
         #poster-img { width: 100%; height: 100%; object-fit: cover; }
     </style>
 </head>
@@ -47,60 +56,63 @@
 
 <div class="viewport">
     <div id="schedule-sec" class="section active">
-        <div class="title">是日活動表</div>
+        <div class="title">
+            <span class="zh">今日預約安排</span>
+            <span class="en">Daily Schedule</span>
+        </div>
         <table>
             <thead>
                 <tr>
-                    <th width="25%">時間</th>
-                    <th width="45%">地點</th>
-                    <th width="30%">租用</th>
+                    <th width="28%">
+                        <span class="zh">時間</span><span class="en">Time</span>
+                    </th>
+                    <th width="42%">
+                        <span class="zh">地點</span><span class="en">Location</span>
+                    </th>
+                    <th width="30%">
+                        <span class="zh">負責人</span><span class="en">In-charge</span>
+                    </th>
                 </tr>
             </thead>
             <tbody id="data-list">
-                <tr><td colspan="3" class="no-data">正在同步資料...</td></tr>
+                <tr><td colspan="3" class="no-data"><span class="zh">正在讀取...</span><span class="en">Loading...</span></td></tr>
             </tbody>
         </table>
     </div>
+    
     <div id="poster-sec" class="section">
         <img id="poster-img" src="">
     </div>
 </div>
 
 <script>
-    const scheduleUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4_yLW9apo6a7pN1PdN65cTKbnnb8bLCBUNrXwWIiP28rn_G5r7-vB1hqTZXXhr8LerJrSn4f334eu/pub?gid=0&single=true&output=csv';
-    const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4_yLW9apo6a7pN1PdN65cTKbnnb8bLCBUNrXwWIiP28rn_G5r7-vB1hqTZXXhr8LerJrSn4f334eu/pub?gid=6573573&single=true&output=csv';
+    // --- 更新後的 CSV 網址 ---
+    // 工作表1 (自動推算)
+    const scheduleUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=0&single=true&output=csv';
+    // Posters 分頁
+    const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=6573573&single=true&output=csv';
 
     let posters = [];
     let pIdx = 0;
 
-    // 自動修正 Google Drive 連結格式
-    function fixGDriveUrl(url) {
-        if (url.includes('drive.google.com')) {
-            const idMatch = url.match(/\/d\/(.+?)\//) || url.match(/id=(.+?)(&|$)/);
-            if (idMatch) return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
-        }
-        return url;
-    }
-
     function updateTime() {
         const now = new Date();
-        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-        document.getElementById('date').innerText = now.toLocaleDateString('zh-TW', options);
+        const zhDate = now.toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+        const enDate = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+        document.getElementById('date').innerHTML = `${zhDate} <br> ${enDate}`;
         document.getElementById('time').innerText = now.toLocaleTimeString('zh-TW', {hour: '2-digit', minute:'2-digit', hour12: false});
     }
     setInterval(updateTime, 1000);
 
     async function loadData() {
         try {
-            // 抓取海報並自動轉換網址
-            const pRes = await fetch(posterUrl + '&t=' + Date.now());
+            // 抓取海報連結
+            const pRes = await fetch(posterUrl + '&cache=' + Date.now());
             const pText = await pRes.text();
-            posters = pText.split('\n').slice(1)
-                        .map(line => fixGDriveUrl(line.trim()))
-                        .filter(l => l.length > 10);
+            posters = pText.split('\n').slice(1).map(l => l.trim()).filter(l => l.length > 10);
 
             // 抓取活動表格
-            const sRes = await fetch(scheduleUrl + '&t=' + Date.now());
+            const sRes = await fetch(scheduleUrl + '&cache=' + Date.now());
             const sText = await sRes.text();
             const rows = sText.split(/\r?\n/).map(r => r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/));
             
@@ -115,7 +127,7 @@
                 const date = row[0] ? row[0].replace(/["']/g, "").trim() : "";
                 if(date === todayStr) {
                     found = true;
-                    // 跳過 row[2] (活動內容)，只顯示時間(1)、地點(3)、租用(4)
+                    // row[1]=時間, row[3]=地點, row[4]=負責人 (跳過 row[2] 活動)
                     tbody.innerHTML += `<tr>
                         <td>${row[1]}</td>
                         <td><span class="location-tag">${row[3]}</span></td>
@@ -123,8 +135,14 @@
                     </tr>`;
                 }
             });
-            if(!found) tbody.innerHTML = `<tr><td colspan="3" class="no-data">今日暫無預約活動<br><small>${todayStr}</small></td></tr>`;
-        } catch(e) { console.error("Sync Error:", e); }
+            if(!found) {
+                tbody.innerHTML = `<tr><td colspan="3" class="no-data">
+                    <span class="zh">今日暫無預約活動</span>
+                    <span class="en">No activities scheduled for today</span>
+                    <small style="font-size:24px; color:#ccc; display:block; margin-top:10px;">${todayStr}</small>
+                </td></tr>`;
+            }
+        } catch(e) { console.error("Update failed:", e); }
     }
 
     function switchMode() {
@@ -136,20 +154,18 @@
             pSec.classList.add('active');
             document.getElementById('poster-img').src = posters[pIdx];
             pIdx = (pIdx + 1) % posters.length;
-            setTimeout(switchMode, 15000); // 海報顯示 15 秒
+            setTimeout(switchMode, 15000); // 海報 15 秒
         } else {
             pSec.classList.remove('active');
             sSec.classList.add('active');
-            setTimeout(switchMode, 30000); // 表格顯示 30 秒
+            setTimeout(switchMode, 30000); // 表格 30 秒
         }
     }
 
     loadData();
-    setInterval(loadData, 600000);
+    setInterval(loadData, 600000); // 10分鐘同步一次
     updateTime();
     switchMode();
 </script>
 </body>
 </html>
-
-
