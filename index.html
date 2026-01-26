@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bilingual Signage - Stable Edition</title>
+    <title>Bilingual Signage - Pagination Edition</title>
     <style>
-        :root { --main-blue: #003366; --text-gray: #666; }
+        :root { --main-blue: #003366; --bg-gray: #f8f9fa; }
         body, html { margin: 0; padding: 0; width: 1080px; height: 1920px; font-family: "Microsoft JhengHei", Arial, sans-serif; overflow: hidden; background: #fff; }
         
-        /* Header */
+        /* 頂部 Header */
         header { 
             height: 180px; display: flex; justify-content: space-between; align-items: center; 
             padding: 0 60px; border-bottom: 8px solid var(--main-blue); background: white;
@@ -16,39 +16,39 @@
         .logo img { height: 80px; width: auto; }
         .clock-box { text-align: right; }
         #time { font-size: 80px; font-weight: 900; color: var(--main-blue); line-height: 1; }
-        #date { font-size: 30px; color: var(--text-gray); font-weight: bold; }
+        #date { font-size: 28px; color: #666; font-weight: bold; margin-bottom: 5px; }
 
-        /* Viewport */
+        /* 主區域 */
         .viewport { position: relative; height: 1740px; }
-        .section { position: absolute; width: 100%; height: 100%; transition: opacity 1s; opacity: 0; visibility: hidden; }
-        .section.active { opacity: 1; visibility: visible; }
+        .section { position: absolute; width: 100%; height: 100%; display: none; }
+        .section.active { display: block; }
 
-        .title { padding: 40px 60px 20px; color: var(--main-blue); }
-        .title .zh { font-size: 64px; font-weight: bold; display: block; }
-        .title .en { font-size: 34px; color: var(--text-gray); }
+        /* 標題與分頁標示 */
+        .title-area { padding: 40px 60px 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .title .zh { font-size: 64px; font-weight: bold; color: var(--main-blue); display: block; }
+        .title .en { font-size: 34px; color: #555; }
+        .page-indicator { font-size: 28px; color: #999; font-weight: bold; }
 
-        /* 表格容器與自動捲動 */
-        .table-container { width: 1000px; margin: 0 auto; height: 1300px; overflow: hidden; position: relative; }
-        table { width: 100%; border-collapse: collapse; table-layout: fixed; position: relative; }
-        th { border-bottom: 4px solid var(--main-blue); padding: 20px 10px; text-align: left; background: white; }
-        .th-zh { font-size: 38px; color: #000; display: block; }
-        .th-en { font-size: 22px; color: #777; font-weight: normal; display: block; }
+        /* 表格排版 - 徹底修正重疊 */
+        .table-container { width: 960px; margin: 0 auto; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         
-        td { padding: 35px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
-        .cell-zh { font-size: 40px; font-weight: bold; display: block; color: #222; margin-bottom: 5px; }
-        .cell-en { font-size: 26px; display: block; color: #555; line-height: 1.2; }
+        thead th { border-bottom: 4px solid var(--main-blue); padding: 20px 10px; text-align: left; }
+        .th-zh { font-size: 36px; color: #000; display: block; }
+        .th-en { font-size: 22px; color: #777; font-weight: normal; }
         
-        .location-tag { color: #0066cc; background: #e7f2ff; padding: 5px 15px; border-radius: 8px; display: inline-block; }
-        .no-data { text-align: center; padding: 200px; font-size: 48px; color: #ccc; }
+        tbody td { padding: 35px 10px; border-bottom: 1px solid #eee; vertical-align: top; height: 180px; }
+        .cell-zh { font-size: 42px; font-weight: bold; display: block; color: #222; margin-bottom: 8px; line-height: 1.2; }
+        .cell-en { font-size: 26px; display: block; color: #666; line-height: 1.2; }
+        
+        /* 地點標籤 */
+        .venue-box { background: #e7f2ff; padding: 10px 15px; border-radius: 10px; display: inline-block; width: 90%; }
+        .venue-box .cell-zh { color: #0066cc; }
 
-        /* 捲動動畫 */
-        @keyframes scrollTable {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(var(--scroll-dist)); }
-        }
-        .scrolling { animation: scrollTable var(--scroll-speed) linear infinite; }
-
+        /* 海報樣式 */
         #poster-img { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        
+        .no-data { text-align: center; padding: 300px 0; font-size: 48px; color: #ccc; }
     </style>
 </head>
 <body>
@@ -63,11 +63,14 @@
 
 <div class="viewport">
     <div id="schedule-sec" class="section active">
-        <div class="title">
-            <span class="zh">今日預約安排</span><span class="en">Daily Schedule</span>
+        <div class="title-area">
+            <div class="title">
+                <span class="zh">今日預約安排</span><span class="en">Daily Schedule</span>
+            </div>
+            <div id="page-num" class="page-indicator">Page 1/1</div>
         </div>
         <div class="table-container">
-            <table id="main-table">
+            <table>
                 <thead>
                     <tr>
                         <th width="22%"><span class="th-zh">時間</span><span class="th-en">Time</span></th>
@@ -75,10 +78,12 @@
                         <th width="30%"><span class="th-zh">負責人</span><span class="th-en">In-charge</span></th>
                     </tr>
                 </thead>
-                <tbody id="data-list"></tbody>
+                <tbody id="data-list">
+                    </tbody>
             </table>
         </div>
     </div>
+    
     <div id="poster-sec" class="section">
         <img id="poster-img" src="">
     </div>
@@ -88,29 +93,27 @@
     const scheduleUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=0&single=true&output=csv';
     const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=6573573&single=true&output=csv';
 
-    let posterList = [];
-    let posterIdx = 0;
+    let allTodayData = []; // 儲存今天所有的活動
+    let posterList = [];   // 儲存所有海報網址
+    let currentSchedulePage = 0;
+    let currentPosterIdx = 0;
+    const rowsPerPage = 7; // 每頁顯示 7 筆，最適合 1920 高度
 
-    // 穩定版 CSV 解析
-    function simpleParseCSV(text) {
+    // 輕量 CSV 解析
+    function parseCSV(text) {
         return text.split(/\r?\n/).map(line => {
-            const parts = [];
-            let current = '';
-            let inQuotes = false;
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-                if (char === '"') inQuotes = !inQuotes;
-                else if (char === ',' && !inQuotes) {
-                    parts.push(current.trim());
-                    current = '';
-                } else current += char;
+            let parts = [], curr = '', inQ = false;
+            for (let c of line) {
+                if (c === '"') inQ = !inQ;
+                else if (c === ',' && !inQ) { parts.push(curr.trim()); curr = ''; }
+                else curr += c;
             }
-            parts.push(current.trim());
+            parts.push(curr.trim());
             return parts;
-        }).filter(row => row.length > 1);
+        }).filter(r => r.length > 1);
     }
 
-    function updateTime() {
+    function updateClock() {
         const now = new Date();
         const zh = now.toLocaleDateString('zh-TW', {year:'numeric', month:'long', day:'numeric', weekday:'long'});
         const en = now.toLocaleDateString('en-US', {month:'short', day:'numeric', weekday:'short'});
@@ -118,83 +121,103 @@
         document.getElementById('time').innerText = now.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12: false});
     }
 
-    async function syncData() {
+    async function fetchData() {
         try {
-            // 同步海報
+            // 抓海報
             const pRes = await fetch(posterUrl + '&t=' + Date.now());
             const pText = await pRes.text();
             posterList = pText.split('\n').slice(1).map(l => l.trim()).filter(l => l.length > 10);
 
-            // 同步活動
+            // 抓活動
             const sRes = await fetch(scheduleUrl + '&t=' + Date.now());
             const sText = await sRes.text();
-            const rows = simpleParseCSV(sText);
-            
-            const tbody = document.getElementById('data-list');
-            tbody.classList.remove('scrolling');
-            tbody.innerHTML = '';
+            const rows = parseCSV(sText);
             
             const now = new Date();
             const todayStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getFullYear()).slice(-2)}`;
 
-            let foundCount = 0;
-            rows.slice(1).forEach(row => {
-                // A:日期, B:時間, D:地中, E:地英, F:負中, G:負英
-                if(row[0] === todayStr) {
-                    foundCount++;
-                    tbody.innerHTML += `<tr>
-                        <td><span class="cell-zh">${row[1]}</span></td>
-                        <td>
-                            <div class="location-tag">
-                                <span class="cell-zh">${row[3] || ''}</span>
-                                <span class="cell-en">${row[4] || ''}</span>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="cell-zh">${row[5] || ''}</span>
-                            <span class="cell-en">${row[6] || ''}</span>
-                        </td>
-                    </tr>`;
-                }
-            });
-
-            if(foundCount === 0) tbody.innerHTML = `<tr><td colspan="3" class="no-data">今日暫無活動 <br> No activities</td></tr>`;
-
-            // 處理捲動
-            setTimeout(() => {
-                const containerH = 1300;
-                const tableH = tbody.offsetHeight;
-                if (tableH > containerH) {
-                    tbody.style.setProperty('--scroll-dist', `-${tableH - containerH + 100}px`);
-                    tbody.style.setProperty('--scroll-speed', `${foundCount * 4}s`);
-                    tbody.classList.add('scrolling');
-                }
-            }, 1000);
+            allTodayData = rows.slice(1).filter(row => row[0] === todayStr);
+            console.log("今日數據共:", allTodayData.length);
         } catch(e) { console.error("Sync Error", e); }
     }
 
-    function rotateDisplay() {
-        const sch = document.getElementById('schedule-sec');
-        const pos = document.getElementById('poster-sec');
+    function renderTablePage(pageIdx) {
+        const tbody = document.getElementById('data-list');
+        tbody.innerHTML = '';
         
-        if (sch.classList.contains('active') && posterList.length > 0) {
-            sch.classList.remove('active');
-            pos.classList.add('active');
-            document.getElementById('poster-img').src = posterList[posterIdx];
-            posterIdx = (posterIdx + 1) % posterList.length;
-            setTimeout(rotateDisplay, 15000); // 海報 15s
+        const start = pageIdx * rowsPerPage;
+        const end = start + rowsPerPage;
+        const pageData = allTodayData.slice(start, end);
+
+        if (allTodayData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="no-data">今日暫無活動 <br> No activities scheduled</td></tr>`;
+            return;
+        }
+
+        pageData.forEach(row => {
+            tbody.innerHTML += `
+                <tr>
+                    <td><span class="cell-zh">${row[1]}</span></td>
+                    <td>
+                        <div class="venue-box">
+                            <span class="cell-zh">${row[3] || ''}</span>
+                            <span class="cell-en">${row[4] || ''}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="cell-zh">${row[5] || ''}</span>
+                        <span class="cell-en">${row[6] || ''}</span>
+                    </td>
+                </tr>`;
+        });
+
+        const totalPages = Math.ceil(allTodayData.length / rowsPerPage) || 1;
+        document.getElementById('page-num').innerText = `Page ${pageIdx + 1} / ${totalPages}`;
+    }
+
+    function mainLoop() {
+        const schSec = document.getElementById('schedule-sec');
+        const posSec = document.getElementById('poster-sec');
+        const totalPages = Math.ceil(allTodayData.length / rowsPerPage);
+
+        // 邏輯：先顯示活動表的分頁，全部翻完後，顯示一張海報，循環
+        if (currentSchedulePage < totalPages) {
+            // 顯示活動表分頁
+            schSec.classList.add('active');
+            posSec.classList.remove('active');
+            renderTablePage(currentSchedulePage);
+            currentSchedulePage++;
+            setTimeout(mainLoop, 15000); // 每頁停 15 秒
+        } else if (posterList.length > 0) {
+            // 活動表翻完了，顯示一張海報
+            schSec.classList.remove('active');
+            posSec.classList.add('active');
+            document.getElementById('poster-img').src = posterList[currentPosterIdx];
+            
+            currentPosterIdx++;
+            if (currentPosterIdx >= posterList.length) currentPosterIdx = 0;
+            
+            currentSchedulePage = 0; // 下次回到活動表第一頁
+            setTimeout(mainLoop, 15000); // 海報停 15 秒
         } else {
-            pos.classList.remove('active');
-            sch.classList.add('active');
-            setTimeout(rotateDisplay, 40000); // 活動表 40s (足夠捲動)
+            // 如果沒海報，就直接重啟活動表
+            currentSchedulePage = 0;
+            mainLoop();
         }
     }
 
-    updateTime();
-    setInterval(updateTime, 1000);
-    syncData();
-    setInterval(syncData, 600000);
-    setTimeout(rotateDisplay, 5000); // 啟動輪播
+    // 啟動
+    updateClock();
+    setInterval(updateClock, 1000);
+    
+    // 初始化數據並進入循環
+    fetchData().then(() => {
+        mainLoop();
+    });
+
+    // 每 10 分鐘背景更新一次數據，不影響目前播放
+    setInterval(fetchData, 600000);
+
 </script>
 </body>
 </html>
