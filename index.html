@@ -3,37 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bilingual Signage - Imgur Fix</title>
+    <title>Bilingual Signage - 5 Rows Edition</title>
     <style>
-        :root { --main-blue: #003366; }
+        :root { --main-blue: #003366; --bg-gray: #f8f9fa; }
         body, html { margin: 0; padding: 0; width: 1080px; height: 1920px; font-family: "Microsoft JhengHei", Arial, sans-serif; overflow: hidden; background: #fff; }
         
         header { 
             height: 180px; display: flex; justify-content: space-between; align-items: center; 
             padding: 0 60px; border-bottom: 8px solid var(--main-blue); background: white;
-            position: relative; z-index: 10;
         }
-        .logo img { height: 60px; width: auto; }
+        .logo img { height: 90px; width: auto; }
         .clock-box { text-align: right; }
         #time { font-size: 85px; font-weight: 900; color: var(--main-blue); line-height: 1; }
         #date { font-size: 30px; color: #666; font-weight: bold; margin-bottom: 5px; }
 
-        .viewport { position: relative; height: 1740px; width: 1080px; overflow: hidden; }
+        .viewport { position: relative; height: 1740px; }
         .section { position: absolute; width: 100%; height: 100%; display: none; }
         .section.active { display: block; }
 
-        /* 表格樣式 */
         .title-area { padding: 50px 60px 30px; display: flex; justify-content: space-between; align-items: flex-end; }
         .title .zh { font-size: 72px; font-weight: bold; color: var(--main-blue); display: block; }
         .title .en { font-size: 38px; color: #555; }
         .page-indicator { font-size: 32px; color: #bbb; font-weight: bold; }
 
+        /* 表格排版：針對 5 筆資料加大間距 */
         .table-container { width: 980px; margin: 0 auto; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        
         thead th { border-bottom: 5px solid var(--main-blue); padding: 25px 10px; text-align: left; }
         .th-zh { font-size: 42px; color: #000; display: block; }
         .th-en { font-size: 24px; color: #777; font-weight: normal; }
         
+        /* 增加 td 高度，讓 5 筆資料平均分佈 */
         tbody td { padding: 45px 15px; border-bottom: 1px solid #eee; vertical-align: top; height: 230px; }
         .cell-zh { font-size: 48px; font-weight: bold; display: block; color: #222; margin-bottom: 12px; line-height: 1.2; }
         .cell-en { font-size: 30px; display: block; color: #666; line-height: 1.2; }
@@ -41,15 +42,8 @@
         .venue-box { background: #e7f2ff; padding: 15px 20px; border-radius: 12px; display: inline-block; width: 92%; }
         .venue-box .cell-zh { color: #0066cc; }
 
-        /* 圖片設定：使用 Imgur 連結時 object-fit: contain 最安全 */
-        #poster-img { width: 100%; height: 100%; object-fit: contain; background: #f4f4f4; }
-        
-        /* 除錯框樣式 */
-        #debug-console {
-            position: fixed; bottom: 0; right: 0; width: 600px; max-height: 400px;
-            background: rgba(0,0,0,0.9); color: #0f0; font-family: monospace; font-size: 16px;
-            padding: 15px; overflow-y: auto; z-index: 9999; display: block; border-top-left-radius: 10px;
-        }
+        #poster-img { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        .no-data { text-align: center; padding: 400px 0; font-size: 56px; color: #ccc; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -63,20 +57,20 @@
 </header>
 
 <div class="viewport">
-    <div id="schedule-sec" class="section">
+    <div id="schedule-sec" class="section active">
         <div class="title-area">
             <div class="title">
-                <span class="zh">是日活動表</span><span class="en">Daily Schedule</span>
+                <span class="zh">今日預約安排</span><span class="en">Daily Schedule</span>
             </div>
-            <div id="page-num" class="page-indicator"></div>
+            <div id="page-num" class="page-indicator">Page 1/1</div>
         </div>
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
                         <th width="22%"><span class="th-zh">時間</span><span class="th-en">Time</span></th>
-                        <th width="48%"><span class="th-zh">場地</span><span class="th-en">Venue</span></th>
-                        <th width="30%"><span class="th-zh">機構/活動</span><span class="th-en">Organizations/Events</span></th>
+                        <th width="48%"><span class="th-zh">地點</span><span class="th-en">Venue</span></th>
+                        <th width="30%"><span class="th-zh">負責人</span><span class="th-en">In-charge</span></th>
                     </tr>
                 </thead>
                 <tbody id="data-list"></tbody>
@@ -84,14 +78,11 @@
         </div>
     </div>
     <div id="poster-sec" class="section">
-        <img id="poster-img" src="" onerror="handleImgError(this)">
+        <img id="poster-img" src="">
     </div>
 </div>
 
-<div id="debug-console">System initializing...</div>
-
 <script>
-    // 請注意：這裡的 gid=6573573 對應您原本的海報分頁
     const scheduleUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=0&single=true&output=csv';
     const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=6573573&single=true&output=csv';
 
@@ -99,23 +90,9 @@
     let posterList = [];
     let currentSchedulePage = 0;
     let currentPosterIdx = 0;
+    
+    // --- 核心修改：每頁 5 筆 ---
     const rowsPerPage = 5; 
-
-    function debugLog(msg) {
-        const box = document.getElementById('debug-console');
-        const time = new Date().toLocaleTimeString();
-        box.innerHTML = `[${time}] ${msg}<br>` + box.innerHTML;
-    }
-
-    // Google Drive 連結轉換 (保留此功能以備不時之需，Imgur 連結會直接通過)
-    function convertLink(url) {
-        if (!url) return '';
-        if (url.includes('drive.google.com') && url.includes('/d/')) {
-            const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-            if (idMatch && idMatch[1]) return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
-        }
-        return url;
-    }
 
     function parseCSV(text) {
         return text.split(/\r?\n/).map(line => {
@@ -136,70 +113,21 @@
         document.getElementById('time').innerText = now.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12: false});
     }
 
-    function handleImgError(img) {
-        // 防止無限循環報錯
-        if (posterList.length === 0) return; 
-        debugLog(`❌ Load failed: ${img.src.substring(0,30)}...`);
-        
-        // 嘗試下一張
-        if (posterList.length > 1) {
-            currentPosterIdx = (currentPosterIdx + 1) % posterList.length;
-            setTimeout(() => { img.src = posterList[currentPosterIdx]; }, 1000);
-        }
-    }
-
     async function fetchData() {
         try {
-            debugLog("🔄 Fetching data from Google...");
-            // 加入隨機參數 &rand= 以強制避開瀏覽器緩存，但無法避開 Google 伺服器端緩存
             const [pRes, sRes] = await Promise.all([
-                fetch(posterUrl + '&rand=' + Math.random()), 
-                fetch(scheduleUrl + '&rand=' + Math.random())
+                fetch(posterUrl + '&t=' + Date.now()),
+                fetch(scheduleUrl + '&t=' + Date.now())
             ]);
-
-            // --- 海報處理與診斷 ---
             const pText = await pRes.text();
-            
-            // ★★★ 關鍵診斷：印出 CSV 的前 100 個字元 ★★★
-            // 如果這裡顯示的是 header (如 "Link, Description")，但沒有下面的連結，代表 Google 緩存還沒更新
-            // 如果這裡顯示的是 "Time, Venue" (活動表的標題)，代表 GID 貼錯了
-            debugLog(`📄 Raw CSV Header: ${pText.substring(0, 100).replace(/\n/g, ' ')}...`);
+            posterList = pText.split('\n').slice(1).map(l => l.trim()).filter(l => l.length > 10);
 
-            const pRows = parseCSV(pText);
-            // 搜尋所有包含 http 的儲存格 (同時支援 Google Drive 和 Imgur)
-            posterList = pRows
-                .map(row => row.find(cell => cell && (cell.includes('http://') || cell.includes('https://'))))
-                .filter(url => url && url.length > 10)
-                .map(url => convertLink(url));
-
-            debugLog(`✅ Posters found in CSV: ${posterList.length}`);
-            if (posterList.length > 0) {
-                debugLog(`First poster: ${posterList[0]}`);
-            } else {
-                debugLog(`⚠️ Warning: CSV downloaded but no links found.`);
-            }
-
-            // --- 活動處理 ---
             const sText = await sRes.text();
             const rows = parseCSV(sText);
             const now = new Date();
             const todayStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getFullYear()).slice(-2)}`;
-            
-            const seen = new Set();
-            allTodayData = rows.slice(1).filter(row => {
-                const isToday = row[0] === todayStr;
-                const uniqueKey = row.join('|');
-                if (isToday && !seen.has(uniqueKey)) {
-                    seen.add(uniqueKey);
-                    return true;
-                }
-                return false;
-            });
-            debugLog(`✅ Events today: ${allTodayData.length}`);
-
-        } catch(e) { 
-            debugLog(`❌ Error: ${e.message}`);
-        }
+            allTodayData = rows.slice(1).filter(row => row[0] === todayStr);
+        } catch(e) { console.error(e); }
     }
 
     function renderTablePage(pageIdx) {
@@ -207,14 +135,30 @@
         tbody.innerHTML = '';
         const start = pageIdx * rowsPerPage;
         const pageData = allTodayData.slice(start, start + rowsPerPage);
-        
+
+        if (allTodayData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="no-data">今日暫無活動 <br> No activities scheduled</td></tr>`;
+            document.getElementById('page-num').innerText = "";
+            return;
+        }
+
         pageData.forEach(row => {
-            tbody.innerHTML += `<tr>
-                <td><span class="cell-zh">${row[1]}</span></td>
-                <td><div class="venue-box"><span class="cell-zh">${row[3]||''}</span><span class="cell-en">${row[4]||''}</span></div></td>
-                <td><span class="cell-zh">${row[5]||''}</span><span class="cell-en">${row[6]||''}</span></td>
-            </tr>`;
+            tbody.innerHTML += `
+                <tr>
+                    <td><span class="cell-zh">${row[1]}</span></td>
+                    <td>
+                        <div class="venue-box">
+                            <span class="cell-zh">${row[3] || ''}</span>
+                            <span class="cell-en">${row[4] || ''}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="cell-zh">${row[5] || ''}</span>
+                        <span class="cell-en">${row[6] || ''}</span>
+                    </td>
+                </tr>`;
         });
+
         const totalPages = Math.ceil(allTodayData.length / rowsPerPage);
         document.getElementById('page-num').innerText = `Page ${pageIdx + 1} / ${totalPages}`;
     }
@@ -224,42 +168,29 @@
         const posSec = document.getElementById('poster-sec');
         const totalPages = Math.ceil(allTodayData.length / rowsPerPage);
 
-        // 邏輯：有活動且未播完 -> 播活動
-        if (allTodayData.length > 0 && currentSchedulePage < totalPages) {
+        if (currentSchedulePage < totalPages) {
             schSec.classList.add('active');
             posSec.classList.remove('active');
             renderTablePage(currentSchedulePage);
             currentSchedulePage++;
-            setTimeout(mainLoop, 12000); 
-        } 
-        // 邏輯：有海報 -> 播海報
-        else if (posterList.length > 0) {
+            setTimeout(mainLoop, 12000); // 活動每頁停 12 秒
+        } else if (posterList.length > 0) {
             schSec.classList.remove('active');
             posSec.classList.add('active');
-            
-            // 確保圖片 src 有更新
-            const imgEl = document.getElementById('poster-img');
-            if (imgEl.src !== posterList[currentPosterIdx]) {
-                debugLog(`Displaying: ${posterList[currentPosterIdx].split('/').pop()}`); // 只印出檔名
-                imgEl.src = posterList[currentPosterIdx];
-            }
-
+            document.getElementById('poster-img').src = posterList[currentPosterIdx];
             currentPosterIdx = (currentPosterIdx + 1) % posterList.length;
-            currentSchedulePage = 0; 
-            setTimeout(mainLoop, 15000); 
-        } 
-        // 邏輯：沒資料 -> 等待
-        else {
             currentSchedulePage = 0;
-            // 如果沒資料，5秒後重試一次主迴圈
-            setTimeout(mainLoop, 5000);
+            setTimeout(mainLoop, 15000); // 海報停 15 秒
+        } else {
+            currentSchedulePage = 0;
+            mainLoop();
         }
     }
 
     updateClock();
     setInterval(updateClock, 1000);
     fetchData().then(() => mainLoop());
-    setInterval(fetchData, 600000); // 10分鐘重新抓一次資料
+    setInterval(fetchData, 600000);
 </script>
 </body>
 </html>
