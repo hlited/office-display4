@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bilingual Signage - Debug Edition</title>
+    <title>Bilingual Signage - Imgur Fix</title>
     <style>
         :root { --main-blue: #003366; }
         body, html { margin: 0; padding: 0; width: 1080px; height: 1920px; font-family: "Microsoft JhengHei", Arial, sans-serif; overflow: hidden; background: #fff; }
@@ -41,13 +41,14 @@
         .venue-box { background: #e7f2ff; padding: 15px 20px; border-radius: 12px; display: inline-block; width: 92%; }
         .venue-box .cell-zh { color: #0066cc; }
 
+        /* 圖片設定：使用 Imgur 連結時 object-fit: contain 最安全 */
         #poster-img { width: 100%; height: 100%; object-fit: contain; background: #f4f4f4; }
         
-        /* 除錯框樣式 (確認沒問題後可刪除) */
+        /* 除錯框樣式 */
         #debug-console {
-            position: fixed; bottom: 0; right: 0; width: 400px; max-height: 300px;
-            background: rgba(0,0,0,0.8); color: lime; font-family: monospace; font-size: 14px;
-            padding: 10px; overflow-y: auto; z-index: 9999; display: block;
+            position: fixed; bottom: 0; right: 0; width: 600px; max-height: 400px;
+            background: rgba(0,0,0,0.9); color: #0f0; font-family: monospace; font-size: 16px;
+            padding: 15px; overflow-y: auto; z-index: 9999; display: block; border-top-left-radius: 10px;
         }
     </style>
 </head>
@@ -90,6 +91,7 @@
 <div id="debug-console">System initializing...</div>
 
 <script>
+    // 請注意：這裡的 gid=6573573 對應您原本的海報分頁
     const scheduleUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=0&single=true&output=csv';
     const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=6573573&single=true&output=csv';
 
@@ -99,25 +101,20 @@
     let currentPosterIdx = 0;
     const rowsPerPage = 5; 
 
-    // 除錯日誌功能
     function debugLog(msg) {
         const box = document.getElementById('debug-console');
         const time = new Date().toLocaleTimeString();
         box.innerHTML = `[${time}] ${msg}<br>` + box.innerHTML;
     }
 
-    // Google Drive 連結轉換器
-    function convertDriveLink(url) {
+    // Google Drive 連結轉換 (保留此功能以備不時之需，Imgur 連結會直接通過)
+    function convertLink(url) {
         if (!url) return '';
-        // 檢查是否為 Google Drive 連結
-        if (url.includes('drive.google.com')) {
-            // 嘗試提取 ID
+        if (url.includes('drive.google.com') && url.includes('/d/')) {
             const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-            if (idMatch && idMatch[1]) {
-                return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
-            }
+            if (idMatch && idMatch[1]) return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
         }
-        return url; // 如果不是 Drive 連結，或格式不符，直接回傳原網址
+        return url;
     }
 
     function parseCSV(text) {
@@ -139,39 +136,50 @@
         document.getElementById('time').innerText = now.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12: false});
     }
 
-    // 圖片載入失敗處理
     function handleImgError(img) {
-        debugLog(`❌ Image load failed: ${img.src}`);
-        // 嘗試跳到下一張，避免卡在黑畫面
+        // 防止無限循環報錯
+        if (posterList.length === 0) return; 
+        debugLog(`❌ Load failed: ${img.src.substring(0,30)}...`);
+        
+        // 嘗試下一張
         if (posterList.length > 1) {
             currentPosterIdx = (currentPosterIdx + 1) % posterList.length;
-            img.src = posterList[currentPosterIdx];
-            debugLog(`🔄 Retrying with next image...`);
+            setTimeout(() => { img.src = posterList[currentPosterIdx]; }, 1000);
         }
     }
 
     async function fetchData() {
         try {
-            debugLog("Fetching data...");
+            debugLog("🔄 Fetching data from Google...");
+            // 加入隨機參數 &rand= 以強制避開瀏覽器緩存，但無法避開 Google 伺服器端緩存
             const [pRes, sRes] = await Promise.all([
-                fetch(posterUrl + '&t=' + Date.now()),
-                fetch(scheduleUrl + '&t=' + Date.now())
+                fetch(posterUrl + '&rand=' + Math.random()), 
+                fetch(scheduleUrl + '&rand=' + Math.random())
             ]);
 
-            // 海報處理
+            // --- 海報處理與診斷 ---
             const pText = await pRes.text();
-            const pRows = parseCSV(pText);
             
-            // 抓取含有 http 的欄位，並自動轉換 Drive 連結
-            posterList = pRows.slice(1)
-                .map(row => row.find(cell => cell.includes('http') || cell.includes('drive.google.com')))
+            // ★★★ 關鍵診斷：印出 CSV 的前 100 個字元 ★★★
+            // 如果這裡顯示的是 header (如 "Link, Description")，但沒有下面的連結，代表 Google 緩存還沒更新
+            // 如果這裡顯示的是 "Time, Venue" (活動表的標題)，代表 GID 貼錯了
+            debugLog(`📄 Raw CSV Header: ${pText.substring(0, 100).replace(/\n/g, ' ')}...`);
+
+            const pRows = parseCSV(pText);
+            // 搜尋所有包含 http 的儲存格 (同時支援 Google Drive 和 Imgur)
+            posterList = pRows
+                .map(row => row.find(cell => cell && (cell.includes('http://') || cell.includes('https://'))))
                 .filter(url => url && url.length > 10)
-                .map(url => convertDriveLink(url)); // 轉換連結
+                .map(url => convertLink(url));
 
-            debugLog(`✅ Posters loaded: ${posterList.length}`);
-            if(posterList.length > 0) debugLog(`First poster: ${posterList[0].substring(0,30)}...`);
+            debugLog(`✅ Posters found in CSV: ${posterList.length}`);
+            if (posterList.length > 0) {
+                debugLog(`First poster: ${posterList[0]}`);
+            } else {
+                debugLog(`⚠️ Warning: CSV downloaded but no links found.`);
+            }
 
-            // 活動處理
+            // --- 活動處理 ---
             const sText = await sRes.text();
             const rows = parseCSV(sText);
             const now = new Date();
@@ -191,7 +199,6 @@
 
         } catch(e) { 
             debugLog(`❌ Error: ${e.message}`);
-            console.error(e); 
         }
     }
 
@@ -200,7 +207,7 @@
         tbody.innerHTML = '';
         const start = pageIdx * rowsPerPage;
         const pageData = allTodayData.slice(start, start + rowsPerPage);
-
+        
         pageData.forEach(row => {
             tbody.innerHTML += `<tr>
                 <td><span class="cell-zh">${row[1]}</span></td>
@@ -217,7 +224,7 @@
         const posSec = document.getElementById('poster-sec');
         const totalPages = Math.ceil(allTodayData.length / rowsPerPage);
 
-        // 有活動，顯示活動表
+        // 邏輯：有活動且未播完 -> 播活動
         if (allTodayData.length > 0 && currentSchedulePage < totalPages) {
             schSec.classList.add('active');
             posSec.classList.remove('active');
@@ -225,24 +232,26 @@
             currentSchedulePage++;
             setTimeout(mainLoop, 12000); 
         } 
-        // 沒活動 或 翻頁結束 -> 顯示海報
+        // 邏輯：有海報 -> 播海報
         else if (posterList.length > 0) {
             schSec.classList.remove('active');
             posSec.classList.add('active');
             
-            debugLog(`Displaying poster [${currentPosterIdx+1}/${posterList.length}]`);
-            document.getElementById('poster-img').src = posterList[currentPosterIdx];
-            
+            // 確保圖片 src 有更新
+            const imgEl = document.getElementById('poster-img');
+            if (imgEl.src !== posterList[currentPosterIdx]) {
+                debugLog(`Displaying: ${posterList[currentPosterIdx].split('/').pop()}`); // 只印出檔名
+                imgEl.src = posterList[currentPosterIdx];
+            }
+
             currentPosterIdx = (currentPosterIdx + 1) % posterList.length;
             currentSchedulePage = 0; 
-            
-            // 如果當天沒活動，海報輪播頻率
             setTimeout(mainLoop, 15000); 
         } 
-        // 都沒有
+        // 邏輯：沒資料 -> 等待
         else {
             currentSchedulePage = 0;
-            debugLog("No data available. Waiting...");
+            // 如果沒資料，5秒後重試一次主迴圈
             setTimeout(mainLoop, 5000);
         }
     }
@@ -250,7 +259,7 @@
     updateClock();
     setInterval(updateClock, 1000);
     fetchData().then(() => mainLoop());
-    setInterval(fetchData, 600000);
+    setInterval(fetchData, 600000); // 10分鐘重新抓一次資料
 </script>
 </body>
 </html>
