@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bilingual Signage - Optimized</title>
+    <title>Bilingual Signage - Poster Fix</title>
     <style>
         :root { --main-blue: #003366; }
         body, html { margin: 0; padding: 0; width: 1080px; height: 1920px; font-family: "Microsoft JhengHei", Arial, sans-serif; overflow: hidden; background: #fff; }
         
-        /* 頂部 Header 保持固定 */
+        /* 頂部 Header */
         header { 
             height: 180px; display: flex; justify-content: space-between; align-items: center; 
             padding: 0 60px; border-bottom: 8px solid var(--main-blue); background: white;
             position: relative; z-index: 10;
         }
-        .logo img { height: 90px; width: auto; }
+        .logo img { height: 90px; width: auto; } /* 稍微加大 Logo */
         .clock-box { text-align: right; }
         #time { font-size: 85px; font-weight: 900; color: var(--main-blue); line-height: 1; }
         #date { font-size: 30px; color: #666; font-weight: bold; margin-bottom: 5px; }
 
-        /* 內容容器：確保在 Header 下方 */
+        /* 內容容器 */
         .viewport { position: relative; height: 1740px; width: 1080px; overflow: hidden; }
         .section { position: absolute; width: 100%; height: 100%; display: none; }
         .section.active { display: block; }
@@ -43,13 +43,16 @@
         .venue-box { background: #e7f2ff; padding: 15px 20px; border-radius: 12px; display: inline-block; width: 92%; }
         .venue-box .cell-zh { color: #0066cc; }
 
-        /* 海報樣式優化：改用 contain 確保不裁切且不遮擋 Header */
+        /* 海報樣式：確保完整顯示 */
         #poster-img { 
             width: 100%; 
             height: 100%; 
             object-fit: contain; 
-            background: #f4f4f4; /* 背景填充淺灰色，避免純黑太突兀 */
+            background: #f4f4f4; 
         }
+        
+        /* 錯誤訊息 (除錯用) */
+        .error-msg { position: absolute; bottom: 10px; right: 10px; color: red; font-size: 12px; opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -89,8 +92,9 @@
 </div>
 
 <script>
+    // 修正後的網址 (移除了重複的 wfD)
     const scheduleUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=0&single=true&output=csv';
-    const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=6573573&single=true&output=csv';
+    const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=6573573&single=true&output=csv';
 
     let allTodayData = [];
     let posterList = [];
@@ -98,6 +102,7 @@
     let currentPosterIdx = 0;
     const rowsPerPage = 5; 
 
+    // 通用的 CSV 解析器
     function parseCSV(text) {
         return text.split(/\r?\n/).map(line => {
             let parts = [], curr = '', inQ = false;
@@ -108,7 +113,7 @@
             }
             parts.push(curr.trim());
             return parts;
-        }).filter(r => r.length > 1);
+        }).filter(r => r.length > 1); // 過濾掉空行
     }
 
     function updateClock() {
@@ -123,26 +128,39 @@
                 fetch(posterUrl + '&t=' + Date.now()),
                 fetch(scheduleUrl + '&t=' + Date.now())
             ]);
-            const pText = await pRes.text();
-            posterList = pText.split('\n').slice(1).map(l => l.trim()).filter(l => l.length > 10);
 
+            // 1. 處理海報資料 (更聰明的解析)
+            const pText = await pRes.text();
+            const pRows = parseCSV(pText); 
+            // 從每一行中尋找包含 'http' 的欄位，這樣就算有其他欄位也不會讀錯
+            posterList = pRows.slice(1)
+                .map(row => row.find(cell => cell.includes('http') || cell.includes('drive.google.com')))
+                .filter(url => url && url.length > 10);
+            
+            console.log("海報數量:", posterList.length);
+
+            // 2. 處理活動資料
             const sText = await sRes.text();
             const rows = parseCSV(sText);
             const now = new Date();
             const todayStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getFullYear()).slice(-2)}`;
             
-            // 抓取今日數據並去除重複 (避免截圖中出現重複項目的情況)
+            // 去除重複項目
             const seen = new Set();
             allTodayData = rows.slice(1).filter(row => {
                 const isToday = row[0] === todayStr;
-                const uniqueKey = row.join('|');
+                const uniqueKey = row.join('|'); // 簡單的去重 key
                 if (isToday && !seen.has(uniqueKey)) {
                     seen.add(uniqueKey);
                     return true;
                 }
                 return false;
             });
-        } catch(e) { console.error(e); }
+            console.log("今日活動:", allTodayData.length);
+
+        } catch(e) { 
+            console.error("資料讀取錯誤:", e); 
+        }
     }
 
     function renderTablePage(pageIdx) {
@@ -177,7 +195,7 @@
         const posSec = document.getElementById('poster-sec');
         const totalPages = Math.ceil(allTodayData.length / rowsPerPage);
 
-        // --- 優化邏輯：如果有活動，且尚未翻完頁面 ---
+        // 情況 1：有活動，且還沒播完所有分頁 -> 顯示活動表
         if (allTodayData.length > 0 && currentSchedulePage < totalPages) {
             schSec.classList.add('active');
             posSec.classList.remove('active');
@@ -185,30 +203,36 @@
             currentSchedulePage++;
             setTimeout(mainLoop, 12000); 
         } 
-        // --- 優化邏輯：如果沒活動，或者活動翻完了，顯示海報 ---
+        // 情況 2：有海報 -> 顯示海報
         else if (posterList.length > 0) {
             schSec.classList.remove('active');
             posSec.classList.add('active');
-            document.getElementById('poster-img').src = posterList[currentPosterIdx];
+            
+            // 載入海報
+            const imgEl = document.getElementById('poster-img');
+            imgEl.src = posterList[currentPosterIdx];
+            
+            // 索引 + 1
             currentPosterIdx = (currentPosterIdx + 1) % posterList.length;
             
-            // 重置活動頁數，下次從第一頁開始
+            // 重置活動頁碼，下次從頭開始
             currentSchedulePage = 0; 
             
-            // 如果當天沒活動，海報切換頻率維持 15 秒
+            // 如果當天「完全沒活動」，海報顯示 15 秒；如果有活動穿插，也顯示 15 秒
             setTimeout(mainLoop, 15000); 
         } 
-        // --- 如果什麼都沒有 (保險機制) ---
+        // 情況 3：沒活動也沒海報 (等待資料更新)
         else {
             currentSchedulePage = 0;
             setTimeout(mainLoop, 5000);
         }
     }
 
+    // 啟動程式
     updateClock();
     setInterval(updateClock, 1000);
     fetchData().then(() => mainLoop());
-    setInterval(fetchData, 600000);
+    setInterval(fetchData, 600000); // 每 10 分鐘更新一次資料
 </script>
 </body>
 </html>
