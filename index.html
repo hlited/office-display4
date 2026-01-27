@@ -3,52 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bilingual Signage - Pagination Edition</title>
+    <title>Bilingual Signage - Optimized</title>
     <style>
-        :root { --main-blue: #003366; --bg-gray: #f8f9fa; }
+        :root { --main-blue: #003366; }
         body, html { margin: 0; padding: 0; width: 1080px; height: 1920px; font-family: "Microsoft JhengHei", Arial, sans-serif; overflow: hidden; background: #fff; }
         
-        /* 頂部 Header */
+        /* 頂部 Header 保持固定 */
         header { 
             height: 180px; display: flex; justify-content: space-between; align-items: center; 
             padding: 0 60px; border-bottom: 8px solid var(--main-blue); background: white;
+            position: relative; z-index: 10;
         }
-        .logo img { height: 80px; width: auto; }
+        .logo img { height: 90px; width: auto; }
         .clock-box { text-align: right; }
-        #time { font-size: 80px; font-weight: 900; color: var(--main-blue); line-height: 1; }
-        #date { font-size: 28px; color: #666; font-weight: bold; margin-bottom: 5px; }
+        #time { font-size: 85px; font-weight: 900; color: var(--main-blue); line-height: 1; }
+        #date { font-size: 30px; color: #666; font-weight: bold; margin-bottom: 5px; }
 
-        /* 主區域 */
-        .viewport { position: relative; height: 1740px; }
+        /* 內容容器：確保在 Header 下方 */
+        .viewport { position: relative; height: 1740px; width: 1080px; overflow: hidden; }
         .section { position: absolute; width: 100%; height: 100%; display: none; }
         .section.active { display: block; }
 
-        /* 標題與分頁標示 */
-        .title-area { padding: 40px 60px 20px; display: flex; justify-content: space-between; align-items: flex-end; }
-        .title .zh { font-size: 64px; font-weight: bold; color: var(--main-blue); display: block; }
-        .title .en { font-size: 34px; color: #555; }
-        .page-indicator { font-size: 28px; color: #999; font-weight: bold; }
+        /* 表格樣式 */
+        .title-area { padding: 50px 60px 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .title .zh { font-size: 72px; font-weight: bold; color: var(--main-blue); display: block; }
+        .title .en { font-size: 38px; color: #555; }
+        .page-indicator { font-size: 32px; color: #bbb; font-weight: bold; }
 
-        /* 表格排版 - 徹底修正重疊 */
-        .table-container { width: 960px; margin: 0 auto; }
+        .table-container { width: 980px; margin: 0 auto; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        thead th { border-bottom: 5px solid var(--main-blue); padding: 25px 10px; text-align: left; }
+        .th-zh { font-size: 42px; color: #000; display: block; }
+        .th-en { font-size: 24px; color: #777; font-weight: normal; }
         
-        thead th { border-bottom: 4px solid var(--main-blue); padding: 20px 10px; text-align: left; }
-        .th-zh { font-size: 36px; color: #000; display: block; }
-        .th-en { font-size: 22px; color: #777; font-weight: normal; }
+        tbody td { padding: 45px 15px; border-bottom: 1px solid #eee; vertical-align: top; height: 230px; }
+        .cell-zh { font-size: 48px; font-weight: bold; display: block; color: #222; margin-bottom: 12px; line-height: 1.2; }
+        .cell-en { font-size: 30px; display: block; color: #666; line-height: 1.2; }
         
-        tbody td { padding: 35px 10px; border-bottom: 1px solid #eee; vertical-align: top; height: 180px; }
-        .cell-zh { font-size: 42px; font-weight: bold; display: block; color: #222; margin-bottom: 8px; line-height: 1.2; }
-        .cell-en { font-size: 26px; display: block; color: #666; line-height: 1.2; }
-        
-        /* 地點標籤 */
-        .venue-box { background: #e7f2ff; padding: 10px 15px; border-radius: 10px; display: inline-block; width: 90%; }
+        .venue-box { background: #e7f2ff; padding: 15px 20px; border-radius: 12px; display: inline-block; width: 92%; }
         .venue-box .cell-zh { color: #0066cc; }
 
-        /* 海報樣式 */
-        #poster-img { width: 100%; height: 100%; object-fit: cover; background: #000; }
-        
-        .no-data { text-align: center; padding: 300px 0; font-size: 48px; color: #ccc; }
+        /* 海報樣式優化：改用 contain 確保不裁切且不遮擋 Header */
+        #poster-img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain; 
+            background: #f4f4f4; /* 背景填充淺灰色，避免純黑太突兀 */
+        }
     </style>
 </head>
 <body>
@@ -62,12 +63,12 @@
 </header>
 
 <div class="viewport">
-    <div id="schedule-sec" class="section active">
+    <div id="schedule-sec" class="section">
         <div class="title-area">
             <div class="title">
                 <span class="zh">是日活動表</span><span class="en">Daily Schedule</span>
             </div>
-            <div id="page-num" class="page-indicator">Page 1/1</div>
+            <div id="page-num" class="page-indicator"></div>
         </div>
         <div class="table-container">
             <table>
@@ -75,15 +76,13 @@
                     <tr>
                         <th width="22%"><span class="th-zh">時間</span><span class="th-en">Time</span></th>
                         <th width="48%"><span class="th-zh">場地</span><span class="th-en">Venue</span></th>
-                        <th width="30%"><span class="th-zh">租用人士</span><span class="th-en">User</span></th>
+                        <th width="30%"><span class="th-zh">機構/活動</span><span class="th-en">Organizations/Events</span></th>
                     </tr>
                 </thead>
-                <tbody id="data-list">
-                    </tbody>
+                <tbody id="data-list"></tbody>
             </table>
         </div>
     </div>
-    
     <div id="poster-sec" class="section">
         <img id="poster-img" src="">
     </div>
@@ -91,15 +90,14 @@
 
 <script>
     const scheduleUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=0&single=true&output=csv';
-    const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=6573573&single=true&output=csv';
+    const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=6573573&single=true&output=csv';
 
-    let allTodayData = []; // 儲存今天所有的活動
-    let posterList = [];   // 儲存所有海報網址
+    let allTodayData = [];
+    let posterList = [];
     let currentSchedulePage = 0;
     let currentPosterIdx = 0;
-    const rowsPerPage = 5; // 每頁顯示 5 筆，最適合 1920 高度
+    const rowsPerPage = 5; 
 
-    // 輕量 CSV 解析
     function parseCSV(text) {
         return text.split(/\r?\n/).map(line => {
             let parts = [], curr = '', inQ = false;
@@ -115,44 +113,43 @@
 
     function updateClock() {
         const now = new Date();
-        const zh = now.toLocaleDateString('zh-TW', {year:'numeric', month:'long', day:'numeric', weekday:'long'});
-        const en = now.toLocaleDateString('en-US', {month:'short', day:'numeric', weekday:'short'});
-        document.getElementById('date').innerHTML = `${zh} | ${en}`;
+        document.getElementById('date').innerHTML = now.toLocaleDateString('zh-TW', {year:'numeric', month:'long', day:'numeric', weekday:'long'}) + " | " + now.toLocaleDateString('en-US', {month:'short', day:'numeric', weekday:'short'});
         document.getElementById('time').innerText = now.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12: false});
     }
 
     async function fetchData() {
         try {
-            // 抓海報
-            const pRes = await fetch(posterUrl + '&t=' + Date.now());
+            const [pRes, sRes] = await Promise.all([
+                fetch(posterUrl + '&t=' + Date.now()),
+                fetch(scheduleUrl + '&t=' + Date.now())
+            ]);
             const pText = await pRes.text();
             posterList = pText.split('\n').slice(1).map(l => l.trim()).filter(l => l.length > 10);
 
-            // 抓活動
-            const sRes = await fetch(scheduleUrl + '&t=' + Date.now());
             const sText = await sRes.text();
             const rows = parseCSV(sText);
-            
             const now = new Date();
             const todayStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getFullYear()).slice(-2)}`;
-
-            allTodayData = rows.slice(1).filter(row => row[0] === todayStr);
-            console.log("今日數據共:", allTodayData.length);
-        } catch(e) { console.error("Sync Error", e); }
+            
+            // 抓取今日數據並去除重複 (避免截圖中出現重複項目的情況)
+            const seen = new Set();
+            allTodayData = rows.slice(1).filter(row => {
+                const isToday = row[0] === todayStr;
+                const uniqueKey = row.join('|');
+                if (isToday && !seen.has(uniqueKey)) {
+                    seen.add(uniqueKey);
+                    return true;
+                }
+                return false;
+            });
+        } catch(e) { console.error(e); }
     }
 
     function renderTablePage(pageIdx) {
         const tbody = document.getElementById('data-list');
         tbody.innerHTML = '';
-        
         const start = pageIdx * rowsPerPage;
-        const end = start + rowsPerPage;
-        const pageData = allTodayData.slice(start, end);
-
-        if (allTodayData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="3" class="no-data">今日暫無活動 <br> No activities scheduled</td></tr>`;
-            return;
-        }
+        const pageData = allTodayData.slice(start, start + rowsPerPage);
 
         pageData.forEach(row => {
             tbody.innerHTML += `
@@ -171,7 +168,7 @@
                 </tr>`;
         });
 
-        const totalPages = Math.ceil(allTodayData.length / rowsPerPage) || 1;
+        const totalPages = Math.ceil(allTodayData.length / rowsPerPage);
         document.getElementById('page-num').innerText = `Page ${pageIdx + 1} / ${totalPages}`;
     }
 
@@ -180,46 +177,38 @@
         const posSec = document.getElementById('poster-sec');
         const totalPages = Math.ceil(allTodayData.length / rowsPerPage);
 
-        // 邏輯：先顯示活動表的分頁，全部翻完後，顯示一張海報，循環
-        if (currentSchedulePage < totalPages) {
-            // 顯示活動表分頁
+        // --- 優化邏輯：如果有活動，且尚未翻完頁面 ---
+        if (allTodayData.length > 0 && currentSchedulePage < totalPages) {
             schSec.classList.add('active');
             posSec.classList.remove('active');
             renderTablePage(currentSchedulePage);
             currentSchedulePage++;
-            setTimeout(mainLoop, 15000); // 每頁停 15 秒
-        } else if (posterList.length > 0) {
-            // 活動表翻完了，顯示一張海報
+            setTimeout(mainLoop, 12000); 
+        } 
+        // --- 優化邏輯：如果沒活動，或者活動翻完了，顯示海報 ---
+        else if (posterList.length > 0) {
             schSec.classList.remove('active');
             posSec.classList.add('active');
             document.getElementById('poster-img').src = posterList[currentPosterIdx];
+            currentPosterIdx = (currentPosterIdx + 1) % posterList.length;
             
-            currentPosterIdx++;
-            if (currentPosterIdx >= posterList.length) currentPosterIdx = 0;
+            // 重置活動頁數，下次從第一頁開始
+            currentSchedulePage = 0; 
             
-            currentSchedulePage = 0; // 下次回到活動表第一頁
-            setTimeout(mainLoop, 15000); // 海報停 15 秒
-        } else {
-            // 如果沒海報，就直接重啟活動表
+            // 如果當天沒活動，海報切換頻率維持 15 秒
+            setTimeout(mainLoop, 15000); 
+        } 
+        // --- 如果什麼都沒有 (保險機制) ---
+        else {
             currentSchedulePage = 0;
-            mainLoop();
+            setTimeout(mainLoop, 5000);
         }
     }
 
-    // 啟動
     updateClock();
     setInterval(updateClock, 1000);
-    
-    // 初始化數據並進入循環
-    fetchData().then(() => {
-        mainLoop();
-    });
-
-    // 每 10 分鐘背景更新一次數據，不影響目前播放
+    fetchData().then(() => mainLoop());
     setInterval(fetchData, 600000);
-
 </script>
 </body>
 </html>
-
-
