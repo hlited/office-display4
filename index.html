@@ -3,23 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bilingual Signage - Poster Fix</title>
+    <title>Bilingual Signage - Debug Edition</title>
     <style>
         :root { --main-blue: #003366; }
         body, html { margin: 0; padding: 0; width: 1080px; height: 1920px; font-family: "Microsoft JhengHei", Arial, sans-serif; overflow: hidden; background: #fff; }
         
-        /* 頂部 Header */
         header { 
             height: 180px; display: flex; justify-content: space-between; align-items: center; 
             padding: 0 60px; border-bottom: 8px solid var(--main-blue); background: white;
             position: relative; z-index: 10;
         }
-        .logo img { height: 90px; width: auto; } /* 稍微加大 Logo */
+        .logo img { height: 60px; width: auto; }
         .clock-box { text-align: right; }
         #time { font-size: 85px; font-weight: 900; color: var(--main-blue); line-height: 1; }
         #date { font-size: 30px; color: #666; font-weight: bold; margin-bottom: 5px; }
 
-        /* 內容容器 */
         .viewport { position: relative; height: 1740px; width: 1080px; overflow: hidden; }
         .section { position: absolute; width: 100%; height: 100%; display: none; }
         .section.active { display: block; }
@@ -43,16 +41,14 @@
         .venue-box { background: #e7f2ff; padding: 15px 20px; border-radius: 12px; display: inline-block; width: 92%; }
         .venue-box .cell-zh { color: #0066cc; }
 
-        /* 海報樣式：確保完整顯示 */
-        #poster-img { 
-            width: 100%; 
-            height: 100%; 
-            object-fit: contain; 
-            background: #f4f4f4; 
-        }
+        #poster-img { width: 100%; height: 100%; object-fit: contain; background: #f4f4f4; }
         
-        /* 錯誤訊息 (除錯用) */
-        .error-msg { position: absolute; bottom: 10px; right: 10px; color: red; font-size: 12px; opacity: 0.7; }
+        /* 除錯框樣式 (確認沒問題後可刪除) */
+        #debug-console {
+            position: fixed; bottom: 0; right: 0; width: 400px; max-height: 300px;
+            background: rgba(0,0,0,0.8); color: lime; font-family: monospace; font-size: 14px;
+            padding: 10px; overflow-y: auto; z-index: 9999; display: block;
+        }
     </style>
 </head>
 <body>
@@ -87,12 +83,13 @@
         </div>
     </div>
     <div id="poster-sec" class="section">
-        <img id="poster-img" src="">
+        <img id="poster-img" src="" onerror="handleImgError(this)">
     </div>
 </div>
 
+<div id="debug-console">System initializing...</div>
+
 <script>
-    // 修正後的網址 (移除了重複的 wfD)
     const scheduleUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=0&single=true&output=csv';
     const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=6573573&single=true&output=csv';
 
@@ -102,7 +99,27 @@
     let currentPosterIdx = 0;
     const rowsPerPage = 5; 
 
-    // 通用的 CSV 解析器
+    // 除錯日誌功能
+    function debugLog(msg) {
+        const box = document.getElementById('debug-console');
+        const time = new Date().toLocaleTimeString();
+        box.innerHTML = `[${time}] ${msg}<br>` + box.innerHTML;
+    }
+
+    // Google Drive 連結轉換器
+    function convertDriveLink(url) {
+        if (!url) return '';
+        // 檢查是否為 Google Drive 連結
+        if (url.includes('drive.google.com')) {
+            // 嘗試提取 ID
+            const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            if (idMatch && idMatch[1]) {
+                return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`;
+            }
+        }
+        return url; // 如果不是 Drive 連結，或格式不符，直接回傳原網址
+    }
+
     function parseCSV(text) {
         return text.split(/\r?\n/).map(line => {
             let parts = [], curr = '', inQ = false;
@@ -113,7 +130,7 @@
             }
             parts.push(curr.trim());
             return parts;
-        }).filter(r => r.length > 1); // 過濾掉空行
+        }).filter(r => r.length > 1);
     }
 
     function updateClock() {
@@ -122,44 +139,59 @@
         document.getElementById('time').innerText = now.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12: false});
     }
 
+    // 圖片載入失敗處理
+    function handleImgError(img) {
+        debugLog(`❌ Image load failed: ${img.src}`);
+        // 嘗試跳到下一張，避免卡在黑畫面
+        if (posterList.length > 1) {
+            currentPosterIdx = (currentPosterIdx + 1) % posterList.length;
+            img.src = posterList[currentPosterIdx];
+            debugLog(`🔄 Retrying with next image...`);
+        }
+    }
+
     async function fetchData() {
         try {
+            debugLog("Fetching data...");
             const [pRes, sRes] = await Promise.all([
                 fetch(posterUrl + '&t=' + Date.now()),
                 fetch(scheduleUrl + '&t=' + Date.now())
             ]);
 
-            // 1. 處理海報資料 (更聰明的解析)
+            // 海報處理
             const pText = await pRes.text();
-            const pRows = parseCSV(pText); 
-            // 從每一行中尋找包含 'http' 的欄位，這樣就算有其他欄位也不會讀錯
+            const pRows = parseCSV(pText);
+            
+            // 抓取含有 http 的欄位，並自動轉換 Drive 連結
             posterList = pRows.slice(1)
                 .map(row => row.find(cell => cell.includes('http') || cell.includes('drive.google.com')))
-                .filter(url => url && url.length > 10);
-            
-            console.log("海報數量:", posterList.length);
+                .filter(url => url && url.length > 10)
+                .map(url => convertDriveLink(url)); // 轉換連結
 
-            // 2. 處理活動資料
+            debugLog(`✅ Posters loaded: ${posterList.length}`);
+            if(posterList.length > 0) debugLog(`First poster: ${posterList[0].substring(0,30)}...`);
+
+            // 活動處理
             const sText = await sRes.text();
             const rows = parseCSV(sText);
             const now = new Date();
             const todayStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getFullYear()).slice(-2)}`;
             
-            // 去除重複項目
             const seen = new Set();
             allTodayData = rows.slice(1).filter(row => {
                 const isToday = row[0] === todayStr;
-                const uniqueKey = row.join('|'); // 簡單的去重 key
+                const uniqueKey = row.join('|');
                 if (isToday && !seen.has(uniqueKey)) {
                     seen.add(uniqueKey);
                     return true;
                 }
                 return false;
             });
-            console.log("今日活動:", allTodayData.length);
+            debugLog(`✅ Events today: ${allTodayData.length}`);
 
         } catch(e) { 
-            console.error("資料讀取錯誤:", e); 
+            debugLog(`❌ Error: ${e.message}`);
+            console.error(e); 
         }
     }
 
@@ -170,22 +202,12 @@
         const pageData = allTodayData.slice(start, start + rowsPerPage);
 
         pageData.forEach(row => {
-            tbody.innerHTML += `
-                <tr>
-                    <td><span class="cell-zh">${row[1]}</span></td>
-                    <td>
-                        <div class="venue-box">
-                            <span class="cell-zh">${row[3] || ''}</span>
-                            <span class="cell-en">${row[4] || ''}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="cell-zh">${row[5] || ''}</span>
-                        <span class="cell-en">${row[6] || ''}</span>
-                    </td>
-                </tr>`;
+            tbody.innerHTML += `<tr>
+                <td><span class="cell-zh">${row[1]}</span></td>
+                <td><div class="venue-box"><span class="cell-zh">${row[3]||''}</span><span class="cell-en">${row[4]||''}</span></div></td>
+                <td><span class="cell-zh">${row[5]||''}</span><span class="cell-en">${row[6]||''}</span></td>
+            </tr>`;
         });
-
         const totalPages = Math.ceil(allTodayData.length / rowsPerPage);
         document.getElementById('page-num').innerText = `Page ${pageIdx + 1} / ${totalPages}`;
     }
@@ -195,7 +217,7 @@
         const posSec = document.getElementById('poster-sec');
         const totalPages = Math.ceil(allTodayData.length / rowsPerPage);
 
-        // 情況 1：有活動，且還沒播完所有分頁 -> 顯示活動表
+        // 有活動，顯示活動表
         if (allTodayData.length > 0 && currentSchedulePage < totalPages) {
             schSec.classList.add('active');
             posSec.classList.remove('active');
@@ -203,36 +225,32 @@
             currentSchedulePage++;
             setTimeout(mainLoop, 12000); 
         } 
-        // 情況 2：有海報 -> 顯示海報
+        // 沒活動 或 翻頁結束 -> 顯示海報
         else if (posterList.length > 0) {
             schSec.classList.remove('active');
             posSec.classList.add('active');
             
-            // 載入海報
-            const imgEl = document.getElementById('poster-img');
-            imgEl.src = posterList[currentPosterIdx];
+            debugLog(`Displaying poster [${currentPosterIdx+1}/${posterList.length}]`);
+            document.getElementById('poster-img').src = posterList[currentPosterIdx];
             
-            // 索引 + 1
             currentPosterIdx = (currentPosterIdx + 1) % posterList.length;
-            
-            // 重置活動頁碼，下次從頭開始
             currentSchedulePage = 0; 
             
-            // 如果當天「完全沒活動」，海報顯示 15 秒；如果有活動穿插，也顯示 15 秒
+            // 如果當天沒活動，海報輪播頻率
             setTimeout(mainLoop, 15000); 
         } 
-        // 情況 3：沒活動也沒海報 (等待資料更新)
+        // 都沒有
         else {
             currentSchedulePage = 0;
+            debugLog("No data available. Waiting...");
             setTimeout(mainLoop, 5000);
         }
     }
 
-    // 啟動程式
     updateClock();
     setInterval(updateClock, 1000);
     fetchData().then(() => mainLoop());
-    setInterval(fetchData, 600000); // 每 10 分鐘更新一次資料
+    setInterval(fetchData, 600000);
 </script>
 </body>
 </html>
