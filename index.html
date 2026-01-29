@@ -31,7 +31,7 @@
             position: relative;
             z-index: 10; /* 低於海報的層級 */
         }
-        .logo img { height: 70px; width: auto; }
+        .logo img { height: 60px; width: auto; }
         .clock-box { text-align: right; }
         #time { font-size: 85px; font-weight: 900; color: var(--main-blue); line-height: 1; }
         #date { font-size: 30px; color: #666; font-weight: bold; margin-bottom: 5px; }
@@ -50,12 +50,12 @@
         .table-container { width: 980px; margin: 0 auto; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         thead th { border-bottom: 5px solid var(--main-blue); padding: 25px 10px; text-align: left; }
-        .th-zh { font-size: 42px; color: #000; display: block; }
+        .th-zh { font-size: 48px; color: #000; display: block; }
         .th-en { font-size: 24px; color: #777; font-weight: normal; }
         
         tbody td { padding: 45px 15px; border-bottom: 1px solid #eee; vertical-align: top; height: 230px; }
-        .cell-zh { font-size: 48px; font-weight: bold; display: block; color: #222; margin-bottom: 12px; line-height: 1.2; }
-        .cell-en { font-size: 30px; display: block; color: #666; line-height: 1.2; }
+        .cell-zh { font-size: 40px; font-weight: bold; display: block; color: #222; margin-bottom: 12px; line-height: 1.2; }
+        .cell-en { font-size: 25px; display: block; color: #666; line-height: 1.2; }
         
         .venue-box { background: #e7f2ff; padding: 15px 20px; border-radius: 12px; display: inline-block; width: 92%; }
         .venue-box .cell-zh { color: #0066cc; }
@@ -117,9 +117,9 @@
             <table>
                 <thead>
                     <tr>
-                        <th width="22%"><span class="th-zh">時間</span><span class="th-en">Time</span></th>
-                        <th width="48%"><span class="th-zh">場地</span><span class="th-en">Venue</span></th>
-                        <th width="30%"><span class="th-zh">機構/活動</span><span class="th-en">Organizations/Events</span></th>
+                        <th width="20%"><span class="th-zh">時間</span><span class="th-en">Time</span></th>
+                        <th width="45%"><span class="th-zh">場地</span><span class="th-en">Venue</span></th>
+                        <th width="35%"><span class="th-zh">機構/活動</span><span class="th-en">Organizations/Events</span></th>
                     </tr>
                 </thead>
                 <tbody id="data-list"></tbody>
@@ -238,7 +238,7 @@
             posSec.classList.remove('active');
             renderTablePage(currentSchedulePage);
             currentSchedulePage++;
-            setTimeout(mainLoop, 12000); // 每一頁顯示 12 秒
+            setTimeout(mainLoop, 20000); // 每一頁顯示 12 秒
         } 
         // 活動表播完後，如果海報清單有資料，則播海報
         else if (posterList.length > 0) {
@@ -275,3 +275,4 @@
 
 </body>
 </html>
+
