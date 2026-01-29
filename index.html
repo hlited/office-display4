@@ -3,38 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bilingual Signage - 5 Rows Edition</title>
+    <title>1080x1920 Bilingual Signage</title>
     <style>
-        :root { --main-blue: #003366; --bg-gray: #f8f9fa; }
-        body, html { margin: 0; padding: 0; width: 1080px; height: 1920px; font-family: "Microsoft JhengHei", Arial, sans-serif; overflow: hidden; background: #fff; }
-        
+        :root { 
+            --main-blue: #003366; 
+            --bg-gray: #f8f9fa; 
+        }
+
+        /* 畫布設定 1080x1920 */
+        body, html { 
+            margin: 0; padding: 0; 
+            width: 1080px; height: 1920px; 
+            font-family: "Microsoft JhengHei", Arial, sans-serif; 
+            overflow: hidden; 
+            background: #fff; 
+        }
+
+        /* 頁首：高度 180px */
         header { 
-            height: 180px; display: flex; justify-content: space-between; align-items: center; 
-            padding: 0 60px; border-bottom: 8px solid var(--main-blue); background: white;
+            height: 180px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 0 60px; 
+            border-bottom: 8px solid var(--main-blue); 
+            background: white;
+            position: relative;
+            z-index: 10; /* 低於海報的層級 */
         }
         .logo img { height: 70px; width: auto; }
         .clock-box { text-align: right; }
         #time { font-size: 85px; font-weight: 900; color: var(--main-blue); line-height: 1; }
         #date { font-size: 30px; color: #666; font-weight: bold; margin-bottom: 5px; }
 
+        /* 主內容區 */
         .viewport { position: relative; height: 1740px; }
-        .section { position: absolute; width: 100%; height: 100%; display: none; }
+        .section { display: none; width: 100%; height: 100%; }
         .section.active { display: block; }
 
+        /* 活動表樣式 */
         .title-area { padding: 50px 60px 30px; display: flex; justify-content: space-between; align-items: flex-end; }
         .title .zh { font-size: 72px; font-weight: bold; color: var(--main-blue); display: block; }
         .title .en { font-size: 38px; color: #555; }
         .page-indicator { font-size: 32px; color: #bbb; font-weight: bold; }
 
-        /* 表格排版：針對 5 筆資料加大間距 */
         .table-container { width: 980px; margin: 0 auto; }
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        
         thead th { border-bottom: 5px solid var(--main-blue); padding: 25px 10px; text-align: left; }
         .th-zh { font-size: 42px; color: #000; display: block; }
         .th-en { font-size: 24px; color: #777; font-weight: normal; }
         
-        /* 增加 td 高度，讓 5 筆資料平均分佈 */
         tbody td { padding: 45px 15px; border-bottom: 1px solid #eee; vertical-align: top; height: 230px; }
         .cell-zh { font-size: 48px; font-weight: bold; display: block; color: #222; margin-bottom: 12px; line-height: 1.2; }
         .cell-en { font-size: 30px; display: block; color: #666; line-height: 1.2; }
@@ -42,14 +60,44 @@
         .venue-box { background: #e7f2ff; padding: 15px 20px; border-radius: 12px; display: inline-block; width: 92%; }
         .venue-box .cell-zh { color: #0066cc; }
 
-        #poster-img { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        /* 海報樣式：強制蓋過所有內容 (包括 Header) */
+        #poster-sec { 
+            position: fixed; 
+            top: 0; left: 0; 
+            width: 1080px; height: 1920px; 
+            z-index: 9999; /* 極高層級 */
+            background: #000;
+            display: none;
+        }
+        #poster-sec.active { display: block; }
+        #poster-img { width: 1080px; height: 1920px; object-fit: fill; }
+
         .no-data { text-align: center; padding: 400px 0; font-size: 56px; color: #ccc; line-height: 1.5; }
+
+        /* 全螢幕按鈕 */
+        #fs-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 10000;
+            padding: 15px 25px;
+            background: rgba(0,0,0,0.3);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 20px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
-<header>
-    <div class="logo"><img src="logo.png" onerror="this.src='https://via.placeholder.com/300x80?text=LOGO'"></div>
+<button id="fs-btn">【 點擊進入全螢幕播放 】</button>
+
+<header id="main-header">
+    <div class="logo">
+        <img src="logo.png" onerror="this.src='https://via.placeholder.com/300x80?text=LOGO'">
+    </div>
     <div class="clock-box">
         <div id="date">--/--/--</div>
         <div id="time">00:00</div>
@@ -60,7 +108,8 @@
     <div id="schedule-sec" class="section active">
         <div class="title-area">
             <div class="title">
-                <span class="zh">是日活動表</span><span class="en">Daily Schedule</span>
+                <span class="zh">是日活動表</span>
+                <span class="en">Daily Schedule</span>
             </div>
             <div id="page-num" class="page-indicator">Page 1/1</div>
         </div>
@@ -77,12 +126,14 @@
             </table>
         </div>
     </div>
+
     <div id="poster-sec" class="section">
         <img id="poster-img" src="">
     </div>
 </div>
 
 <script>
+    // --- 網址設定 ---
     const scheduleUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=0&single=true&output=csv';
     const posterUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcXft1rOplV2fP2kvm81qdI3gJ4iLaRjX-SsnIwsxRALBwfDvfQtjk8_HWJEdDe0G83oTZHeiLcdwp/pub?gid=6573573&single=true&output=csv';
 
@@ -90,10 +141,19 @@
     let posterList = [];
     let currentSchedulePage = 0;
     let currentPosterIdx = 0;
-    
-    // --- 核心修改：每頁 5 筆 ---
     const rowsPerPage = 5; 
 
+    // --- 方法 B: 全螢幕按鈕邏輯 ---
+    document.getElementById('fs-btn').addEventListener('click', function() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                alert(`無法進入全螢幕: ${err.message}`);
+            });
+            this.style.display = 'none'; // 進入全螢幕後隱藏按鈕
+        }
+    });
+
+    // --- CSV 解析與時間 ---
     function parseCSV(text) {
         return text.split(/\r?\n/).map(line => {
             let parts = [], curr = '', inQ = false;
@@ -113,6 +173,7 @@
         document.getElementById('time').innerText = now.toLocaleTimeString('zh-TW', {hour:'2-digit', minute:'2-digit', hour12: false});
     }
 
+    // --- 抓取資料 ---
     async function fetchData() {
         try {
             const [pRes, sRes] = await Promise.all([
@@ -120,16 +181,18 @@
                 fetch(scheduleUrl + '&t=' + Date.now())
             ]);
             const pText = await pRes.text();
-            posterList = pText.split('\n').slice(1).map(l => l.trim()).filter(l => l.length > 10);
+            // 抓取每一列並過濾空行
+            posterList = pText.split(/\r?\n/).slice(1).map(l => l.replace(/["']/g, "").trim()).filter(l => l.length > 10);
 
             const sText = await sRes.text();
             const rows = parseCSV(sText);
             const now = new Date();
             const todayStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getFullYear()).slice(-2)}`;
             allTodayData = rows.slice(1).filter(row => row[0] === todayStr);
-        } catch(e) { console.error(e); }
+        } catch(e) { console.error("Data fetch error:", e); }
     }
 
+    // --- 渲染表格 ---
     function renderTablePage(pageIdx) {
         const tbody = document.getElementById('data-list');
         tbody.innerHTML = '';
@@ -163,35 +226,52 @@
         document.getElementById('page-num').innerText = `Page ${pageIdx + 1} / ${totalPages}`;
     }
 
+    // --- 主循環邏輯 ---
     function mainLoop() {
         const schSec = document.getElementById('schedule-sec');
         const posSec = document.getElementById('poster-sec');
         const totalPages = Math.ceil(allTodayData.length / rowsPerPage);
 
+        // 如果還有下一頁活動表
         if (currentSchedulePage < totalPages) {
             schSec.classList.add('active');
             posSec.classList.remove('active');
             renderTablePage(currentSchedulePage);
             currentSchedulePage++;
-            setTimeout(mainLoop, 12000); // 活動每頁停 12 秒
-        } else if (posterList.length > 0) {
+            setTimeout(mainLoop, 12000); // 每一頁顯示 12 秒
+        } 
+        // 活動表播完後，如果海報清單有資料，則播海報
+        else if (posterList.length > 0) {
             schSec.classList.remove('active');
-            posSec.classList.add('active');
+            posSec.classList.add('active'); // 這裡觸發 position:fixed 蓋過全部
+            
             document.getElementById('poster-img').src = posterList[currentPosterIdx];
-            currentPosterIdx = (currentPosterIdx + 1) % posterList.length;
-            currentSchedulePage = 0;
-            setTimeout(mainLoop, 15000); // 海報停 15 秒
-        } else {
+            
+            currentPosterIdx++;
+            // 當所有海報播完一遍，回到活動表第一頁
+            if (currentPosterIdx >= posterList.length) {
+                currentPosterIdx = 0;
+                currentSchedulePage = 0;
+                setTimeout(mainLoop, 15000); // 最後一張海報顯示 15 秒
+            } else {
+                setTimeout(mainLoop, 15000); // 每張海報顯示 15 秒
+            }
+        } 
+        // 若無海報，則直接回到活動表
+        else {
             currentSchedulePage = 0;
             mainLoop();
         }
     }
 
+    // --- 初始化 ---
     updateClock();
     setInterval(updateClock, 1000);
     fetchData().then(() => mainLoop());
+    
+    // 每 10 分鐘背景更新一次資料 (不影響目前播放)
     setInterval(fetchData, 600000);
 </script>
+
 </body>
 </html>
-
